@@ -10,7 +10,7 @@ import org.opensearch.gradle.testclusters.StandaloneRestIntegTestTask
 plugins {
     id 'java'
     id 'com.netflix.nebula.ospackage'
-    id "io.freefair.lombok"
+    id "io.freefair.lombok" version "8.0.1"
     id 'jacoco'
     id 'java-library'
     id 'com.diffplug.spotless' version '6.18.0'

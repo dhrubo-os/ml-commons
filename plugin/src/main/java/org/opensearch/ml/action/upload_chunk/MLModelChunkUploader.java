@@ -158,10 +158,6 @@ public class MLModelChunkUploader {
     }
 
     public boolean validateChunkSize(final long length) {
-        var isChunkExceedsSize = false;
-        if (length > ModelHelper.CHUNK_SIZE) {
-            isChunkExceedsSize = true;
-        }
-        return isChunkExceedsSize;
+        return length > ModelHelper.CHUNK_SIZE;
     }
 }

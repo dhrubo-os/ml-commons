@@ -73,7 +73,7 @@ public class MLUploadModelChunkInputTest {
 	public void testMLUploadModelChunkInputWriteToSuccess() throws IOException {
 		BytesStreamOutput bytesStreamOutput = new BytesStreamOutput();
 		mlUploadModelChunkInput.writeTo(bytesStreamOutput);
-		final var newLlUploadModelChunkInput = new MLUploadModelChunkInput(bytesStreamOutput.bytes().streamInput());
+		final MLUploadModelChunkInput newLlUploadModelChunkInput = new MLUploadModelChunkInput(bytesStreamOutput.bytes().streamInput());
 		assertEquals(mlUploadModelChunkInput.getModelId(), newLlUploadModelChunkInput.getModelId());
 		assertEquals(mlUploadModelChunkInput.getChunkNumber(), newLlUploadModelChunkInput.getChunkNumber());
 	}

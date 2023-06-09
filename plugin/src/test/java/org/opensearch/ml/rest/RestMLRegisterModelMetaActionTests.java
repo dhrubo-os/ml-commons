@@ -124,7 +124,7 @@ public class RestMLRegisterModelMetaActionTests extends OpenSearchTestCase {
     private RestRequest getRestRequest() {
         RestRequest.Method method = RestRequest.Method.POST;
         Map<String, String> params = new HashMap<>();
-        final var requestContent = prepareCustomModel();
+        final String requestContent = prepareCustomModel();
         RestRequest request = new FakeRestRequest.Builder(NamedXContentRegistry.EMPTY)
             .withMethod(method)
             .withParams(params)

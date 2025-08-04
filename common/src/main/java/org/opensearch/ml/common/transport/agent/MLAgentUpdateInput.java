@@ -8,6 +8,7 @@ package org.opensearch.ml.common.transport.agent;
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 import static org.opensearch.ml.common.CommonValue.TENANT_ID_FIELD;
 import static org.opensearch.ml.common.CommonValue.VERSION_2_19_0;
+import static org.opensearch.ml.common.agent.MLAgent.AGENT_MEMORY_TYPE;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -383,7 +384,7 @@ public class MLAgentUpdateInput implements ToXContentObject, Writeable {
                 String.format("Agent name cannot be empty or exceed max length of %d characters", MLAgent.AGENT_NAME_MAX_LENGTH)
             );
         }
-        if (memoryType != null && !memoryType.equals("conversation_index")) {
+        if (memoryType != null && !AGENT_MEMORY_TYPE.contains(memoryType)) {
             throw new IllegalArgumentException(String.format("Invalid memory type: %s", memoryType));
         }
         if (tools != null) {

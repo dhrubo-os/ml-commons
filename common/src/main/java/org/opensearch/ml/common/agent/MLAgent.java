@@ -51,6 +51,9 @@ public class MLAgent implements ToXContentObject, Writeable {
     public static final String APP_TYPE_FIELD = "app_type";
     public static final String IS_HIDDEN_FIELD = "is_hidden";
 
+    // agentic_memory_index is for the new agentic memory
+    public static final Set<String> AGENT_MEMORY_TYPE = Set.of("conversation_index", "agentic_memory_index");
+
     public static final int AGENT_NAME_MAX_LENGTH = 128;
 
     private static final Version MINIMAL_SUPPORTED_VERSION_FOR_HIDDEN_AGENT = CommonValue.VERSION_2_13_0;

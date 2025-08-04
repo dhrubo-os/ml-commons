@@ -86,12 +86,24 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 
+/**
+ * MLAgentExecutor is responsible for executing ML agents with various types and configurations.
+ * It handles agent retrieval, memory management, task execution, and output processing.
+ * 
+ * Key responsibilities:
+ * - Validate input and security permissions
+ * - Retrieve and parse ML agents from the index
+ * - Manage conversation memory and interactions
+ * - Execute agents synchronously or asynchronously
+ * - Process and format agent outputs
+ */
 @Log4j2
 @Data
 @NoArgsConstructor
 @Function(FunctionName.AGENT)
 public class MLAgentExecutor implements Executable, SettingsChangeListener {
 
+    // Parameter constants for better maintainability
     public static final String MEMORY_ID = "memory_id";
     public static final String QUESTION = "question";
     public static final String PARENT_INTERACTION_ID = "parent_interaction_id";
@@ -99,6 +111,7 @@ public class MLAgentExecutor implements Executable, SettingsChangeListener {
     public static final String MESSAGE_HISTORY_LIMIT = "message_history_limit";
     public static final String ERROR_MESSAGE = "error_message";
 
+    // Core dependencies injected via constructor
     private Client client;
     private SdkClient sdkClient;
     private Settings settings;
@@ -378,6 +391,19 @@ public class MLAgentExecutor implements Executable, SettingsChangeListener {
         }));
     }
 
+    /**
+     * Executes the ML agent with the provided parameters.
+     * Handles both synchronous and asynchronous execution modes.
+     * 
+     * @param inputDataSet The input data for the agent
+     * @param mlTask The ML task associated with this execution
+     * @param isAsync Whether to execute asynchronously
+     * @param memoryId The memory ID for conversation context
+     * @param mlAgent The ML agent to execute
+     * @param outputs List to collect model tensor outputs
+     * @param modelTensors List to collect individual model tensors
+     * @param listener Callback listener for execution results
+     */
     private void executeAgent(
         RemoteInferenceInputDataSet inputDataSet,
         MLTask mlTask,
@@ -498,82 +524,167 @@ public class MLAgentExecutor implements Executable, SettingsChangeListener {
         });
     }
 
+    /**
+     * Factory method to create the appropriate MLAgentRunner based on agent type.
+     * Supports FLOW, CONVERSATIONAL_FLOW, CONVERSATIONAL, and PLAN_EXECUTE_AND_REFLECT agent types.
+     * 
+     * @param mlAgent The ML agent configuration
+     * @return The appropriate MLAgentRunner instance
+     * @throws IllegalArgumentException if the agent type is not supported
+     */
     @VisibleForTesting
     protected MLAgentRunner getAgentRunner(MLAgent mlAgent) {
         final MLAgentType agentType = MLAgentType.from(mlAgent.getType().toUpperCase(Locale.ROOT));
+
         switch (agentType) {
             case FLOW:
-                return new MLFlowAgentRunner(
-                    client,
-                    settings,
-                    clusterService,
-                    xContentRegistry,
-                    toolFactories,
-                    memoryFactoryMap,
-                    sdkClient,
-                    encryptor
-                );
+                return createFlowAgentRunner();
             case CONVERSATIONAL_FLOW:
-                return new MLConversationalFlowAgentRunner(
-                    client,
-                    settings,
-                    clusterService,
-                    xContentRegistry,
-                    toolFactories,
-                    memoryFactoryMap,
-                    sdkClient,
-                    encryptor
-                );
+                return createConversationalFlowAgentRunner();
             case CONVERSATIONAL:
-                return new MLChatAgentRunner(
-                    client,
-                    settings,
-                    clusterService,
-                    xContentRegistry,
-                    toolFactories,
-                    memoryFactoryMap,
-                    sdkClient,
-                    encryptor
-                );
+                return createChatAgentRunner();
             case PLAN_EXECUTE_AND_REFLECT:
-                return new MLPlanExecuteAndReflectAgentRunner(
-                    client,
-                    settings,
-                    clusterService,
-                    xContentRegistry,
-                    toolFactories,
-                    memoryFactoryMap,
-                    sdkClient,
-                    encryptor
-                );
+                return createPlanExecuteAndReflectAgentRunner();
             default:
                 throw new IllegalArgumentException("Unsupported agent type: " + mlAgent.getType());
         }
     }
 
+    /**
+     * Creates a flow agent runner with common dependencies
+     */
+    private MLFlowAgentRunner createFlowAgentRunner() {
+        return new MLFlowAgentRunner(
+            client,
+            settings,
+            clusterService,
+            xContentRegistry,
+            toolFactories,
+            memoryFactoryMap,
+            sdkClient,
+            encryptor
+        );
+    }
+
+    /**
+     * Creates a conversational flow agent runner with common dependencies
+     */
+    private MLConversationalFlowAgentRunner createConversationalFlowAgentRunner() {
+        return new MLConversationalFlowAgentRunner(
+            client,
+            settings,
+            clusterService,
+            xContentRegistry,
+            toolFactories,
+            memoryFactoryMap,
+            sdkClient,
+            encryptor
+        );
+    }
+
+    /**
+     * Creates a chat agent runner with common dependencies
+     */
+    private MLChatAgentRunner createChatAgentRunner() {
+        return new MLChatAgentRunner(
+            client,
+            settings,
+            clusterService,
+            xContentRegistry,
+            toolFactories,
+            memoryFactoryMap,
+            sdkClient,
+            encryptor
+        );
+    }
+
+    /**
+     * Creates a plan-execute-and-reflect agent runner with common dependencies
+     */
+    private MLPlanExecuteAndReflectAgentRunner createPlanExecuteAndReflectAgentRunner() {
+        return new MLPlanExecuteAndReflectAgentRunner(
+            client,
+            settings,
+            clusterService,
+            xContentRegistry,
+            toolFactories,
+            memoryFactoryMap,
+            sdkClient,
+            encryptor
+        );
+    }
+
+    /**
+     * Processes various types of agent output and converts them to ModelTensor format.
+     * Handles ModelTensorOutput, ModelTensor, Lists, and generic objects.
+     * 
+     * @param output The output from agent execution
+     * @param modelTensors List to collect processed model tensors
+     * @throws PrivilegedActionException if JSON serialization fails
+     */
     @SuppressWarnings("removal")
     public void processOutput(Object output, List<ModelTensor> modelTensors) throws PrivilegedActionException {
-        Gson gson = new Gson();
+        if (output == null) {
+            return;
+        }
+
         if (output instanceof ModelTensorOutput) {
-            ModelTensorOutput modelTensorOutput = (ModelTensorOutput) output;
-            modelTensorOutput.getMlModelOutputs().forEach(outs -> { modelTensors.addAll(outs.getMlModelTensors()); });
+            processModelTensorOutput((ModelTensorOutput) output, modelTensors);
         } else if (output instanceof ModelTensor) {
             modelTensors.add((ModelTensor) output);
         } else if (output instanceof List) {
-            if (((List<?>) output).get(0) instanceof ModelTensor) {
-                modelTensors.addAll(((List<ModelTensor>) output));
-            } else if (((List<?>) output).get(0) instanceof ModelTensors) {
-                ((List<ModelTensors>) output).forEach(outs -> { modelTensors.addAll(outs.getMlModelTensors()); });
-            } else {
-                String result = AccessController.doPrivileged((PrivilegedExceptionAction<String>) () -> gson.toJson(output));
-                modelTensors.add(ModelTensor.builder().name("response").result(result).build());
-            }
+            processListOutput((List<?>) output, modelTensors);
         } else {
-            String result = output instanceof String
-                ? (String) output
-                : AccessController.doPrivileged((PrivilegedExceptionAction<String>) () -> gson.toJson(output));
+            processGenericOutput(output, modelTensors);
+        }
+    }
+
+    /**
+     * Processes ModelTensorOutput by extracting all model tensors
+     */
+    private void processModelTensorOutput(ModelTensorOutput modelTensorOutput, List<ModelTensor> modelTensors) {
+        modelTensorOutput.getMlModelOutputs().forEach(outs -> { modelTensors.addAll(outs.getMlModelTensors()); });
+    }
+
+    /**
+     * Processes List output by determining the type of list elements
+     */
+    @SuppressWarnings("removal")
+    private void processListOutput(List<?> outputList, List<ModelTensor> modelTensors) throws PrivilegedActionException {
+        if (outputList.isEmpty()) {
+            return;
+        }
+
+        Object firstElement = outputList.get(0);
+        if (firstElement instanceof ModelTensor) {
+            modelTensors.addAll((List<ModelTensor>) outputList);
+        } else if (firstElement instanceof ModelTensors) {
+            ((List<ModelTensors>) outputList).forEach(outs -> { modelTensors.addAll(outs.getMlModelTensors()); });
+        } else {
+            // Convert list to JSON string
+            String result = AccessController.doPrivileged((PrivilegedExceptionAction<String>) () -> {
+                Gson gson = new Gson();
+                return gson.toJson(outputList);
+            });
             modelTensors.add(ModelTensor.builder().name("response").result(result).build());
         }
+    }
+
+    /**
+     * Processes generic output by converting to string or JSON
+     */
+    @SuppressWarnings("removal")
+    private void processGenericOutput(Object output, List<ModelTensor> modelTensors) throws PrivilegedActionException {
+        String result;
+        if (output instanceof String) {
+            result = (String) output;
+        } else {
+            result = AccessController.doPrivileged((PrivilegedExceptionAction<String>) () -> {
+                Gson gson = new Gson();
+                return gson.toJson(output);
+            });
+        }
+        modelTensors.add(ModelTensor.builder().name("response").result(result).build());
     }
 
     public void indexMLTask(MLTask mlTask, ActionListener<IndexResponse> listener) {
@@ -601,6 +712,58 @@ public class MLAgentExecutor implements Executable, SettingsChangeListener {
         } catch (Exception e) {
             log.error("Failed to create ML task for {}, {}", mlTask.getFunctionName(), mlTask.getTaskType(), e);
             listener.onFailure(e);
+        }
+    }
+
+    /**
+     * Inner class to encapsulate execution context and reduce parameter passing
+     */
+    private static class ExecutionContext {
+        private final String agentId;
+        private final String tenantId;
+        private final Boolean isAsync;
+        private final RemoteInferenceInputDataSet inputDataSet;
+        private final List<ModelTensors> outputs;
+        private final List<ModelTensor> modelTensors;
+
+        public ExecutionContext(
+            String agentId,
+            String tenantId,
+            Boolean isAsync,
+            RemoteInferenceInputDataSet inputDataSet,
+            List<ModelTensors> outputs,
+            List<ModelTensor> modelTensors
+        ) {
+            this.agentId = agentId;
+            this.tenantId = tenantId;
+            this.isAsync = isAsync;
+            this.inputDataSet = inputDataSet;
+            this.outputs = outputs;
+            this.modelTensors = modelTensors;
+        }
+
+        public String getAgentId() {
+            return agentId;
+        }
+
+        public String getTenantId() {
+            return tenantId;
+        }
+
+        public Boolean getIsAsync() {
+            return isAsync;
+        }
+
+        public RemoteInferenceInputDataSet getInputDataSet() {
+            return inputDataSet;
+        }
+
+        public List<ModelTensors> getOutputs() {
+            return outputs;
+        }
+
+        public List<ModelTensor> getModelTensors() {
+            return modelTensors;
         }
     }
 }

@@ -123,6 +123,8 @@ public class MemoryContainerConstants {
     public static final String UPDATE_MEMORY_PATH = MEMORIES_PATH + "/{" + PARAMETER_MEMORY_TYPE + "}" + "/{" + PARAMETER_MEMORY_ID + "}";
     public static final String GET_MEMORY_PATH = MEMORIES_PATH + "/{" + PARAMETER_MEMORY_TYPE + "}" + "/{" + PARAMETER_MEMORY_ID + "}";
     public static final String DELETE_MEMORIES_BY_QUERY_PATH = MEMORIES_PATH + "/{" + PARAMETER_MEMORY_TYPE + "}" + "/_delete_by_query";
+    public static final String SEMANTIC_SEARCH_MEMORIES_PATH = MEMORIES_PATH + "/long-term/_semantic_search";
+    public static final String HYBRID_SEARCH_MEMORIES_PATH = MEMORIES_PATH + "/long-term/_hybrid_search";
 
     // Memory types are defined in MemoryType enum
     // Memory strategy types are defined in MemoryStrategyType enum

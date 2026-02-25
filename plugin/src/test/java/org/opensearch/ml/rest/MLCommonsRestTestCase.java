@@ -971,6 +971,9 @@ public abstract class MLCommonsRestTestCase extends OpenSearchRestTestCase {
                 String state = getTaskState(taskId);
                 if (targetState.name().equals(state)) {
                     taskDone.set(true);
+                } else if (MLTaskState.FAILED.name().equals(state) || MLTaskState.CANCELLED.name().equals(state)) {
+                    // Task reached a terminal failure state — stop waiting immediately
+                    taskDone.set(true);
                 }
             } catch (IOException e) {
                 throw new RuntimeException(e);

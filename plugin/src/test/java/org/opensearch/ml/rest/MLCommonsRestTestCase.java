@@ -1018,4 +1018,21 @@ public abstract class MLCommonsRestTestCase extends OpenSearchRestTestCase {
             .makeRequest(client, "GET", "/" + indexName + "/" + "_search?search_pipeline=" + pipelineName, null, formattedQuery, null);
         return parseResponseToMap(response);
     }
+
+    /**
+     * Checks whether a remote hostname is reachable via DNS resolution.
+     * Use this to skip tests that require external services when the CI
+     * environment has no network access to that host.
+     *
+     * @param hostname the hostname to check (e.g. "api.openai.com")
+     * @return true if the hostname resolves successfully, false otherwise
+     */
+    public static boolean isServiceReachable(String hostname) {
+        try {
+            java.net.InetAddress.getByName(hostname);
+            return true;
+        } catch (java.net.UnknownHostException e) {
+            return false;
+        }
+    }
 }
